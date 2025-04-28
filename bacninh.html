@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Khám phá Bắc Ninh</title>
+
+  <style>
+    /* CSS nút mở popup */
+    #openPopupBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 55px;
+      height: 55px;
+      background-color: #007bff;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 999;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 0;
+      transition: background-color 0.2s ease;
+    }
+    #openPopupBtn:hover {
+        background-color: #0056b3;
+    }
+    #openPopupBtn span {
+      display: block;
+      width: 6px;
+      height: 6px;
+      background-color: white;
+      border-radius: 50%;
+    }
+
+    /* CSS hộp thoại popup */
+    #popupDialog {
+      display: none; /* Ban đầu ẩn */
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 300px;
+      max-height: 400px;
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 1000;
+      flex-direction: column; /* Sử dụng flexbox để bố cục nội dung */
+      opacity: 0; /* Ban đầu trong suốt */
+      transform: translateY(20px); /* Ban đầu dịch xuống 20px */
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* Hiệu ứng chuyển động */
+    }
+    #popupDialog.show {
+      display: flex; /* Hiển thị khi có class 'show' */
+      opacity: 1; /* Hiển thị đầy đủ */
+      transform: translateY(0); /* Trở về vị trí ban đầu */
+    }
+
+    /* Header của popup */
+    .popup-header {
+      padding: 10px 15px;
+      background-color: #f1f1f1;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+    }
+    .popup-header span {
+      font-weight: bold;
+    }
+
+    /* Nút đóng */
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 5px;
+      color: #555;
+    }
+    .close-btn:hover {
+        color: #000;
+    }
+
+    /* Nội dung của popup - Giao diện chat */
+    .popup-content {
+      display: flex; /* Sử dụng flexbox cho nội dung chat */
+      flex-direction: column; /* Xếp các phần tử theo cột */
+      flex-grow: 1; /* Cho phép nội dung mở rộng lấp đầy không gian */
+      padding: 10px; /* Giảm padding để nội dung chat có nhiều không gian hơn */
+      overflow-y: auto; /* Thêm thanh cuộn cho khu vực tin nhắn */
+      background-color: #e9e9eb; /* Màu nền cho khu vực chat */
+    }
+
+    /* Khu vực hiển thị tin nhắn */
+    #chat-box {
+        flex-grow: 1; /* Cho phép khu vực chat mở rộng */
+        overflow-y: auto; /* Thêm thanh cuộn nếu tin nhắn nhiều */
+        padding: 5px;
+        margin-bottom: 10px; /* Khoảng cách với khung nhập liệu */
+    }
+
+    /* Kiểu dáng tin nhắn */
+    .message {
+        margin-bottom: 8px;
+        padding: 8px 12px;
+        border-radius: 15px;
+        max-width: 80%; /* Giới hạn chiều rộng tin nhắn */
+        word-wrap: break-word; /* Ngắt dòng tin nhắn dài */
+    }
+
+    .message.user {
+        background-color: #007bff; /* Màu tin nhắn người dùng */
+        color: white;
+        align-self: flex-end; /* Căn phải tin nhắn người dùng */
+    }
+
+    .message.bot {
+        background-color: #f1f0f0; /* Màu tin nhắn bot */
+        color: #333;
+        align-self: flex-start; /* Căn trái tin nhắn bot */
+    }
+
+    /* Kiểu dáng tin nhắn loading */
+    .message.loading {
+        background-color: #d5d5d5; /* Màu nền cho loading */
+        color: #555;
+        align-self: flex-start; /* Căn trái */
+        font-style: italic;
+    }
+
+    /* Khu vực nhập tin nhắn */
+    .chat-input-area {
+        display: flex; /* Sử dụng flexbox cho input và button */
+        padding: 5px;
+        border-top: 1px solid #ccc; /* Đường viền trên */
+    }
+
+    .chat-input-area input[type="text"] {
+        flex-grow: 1; /* Cho phép input mở rộng */
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 20px; /* Bo tròn input */
+        margin-right: 5px; /* Khoảng cách với nút gửi */
+        outline: none; /* Bỏ viền khi focus */
+    }
+
+    .chat-input-area button {
+        padding: 8px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 20px; /* Bo tròn nút gửi */
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .chat-input-area button:hover {
+        background-color: #0056b3;
+    }
+
+
+    /* Responsive */
+    @media (max-width: 400px) {
+      #popupDialog {
+        width: calc(100% - 40px);
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+      }
+      #openPopupBtn {
+          bottom: 10px;
+          right: 10px;
+      }
+    }
+  </style>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Hàm hiển thị phần thanh toán
+    function showPayment() {
+      document.getElementById('payment-section').classList.remove('hidden');
+    }
+
+    // Hàm xác nhận thanh toán
+    function confirmPayment() {
+      document.getElementById('success-message').classList.remove('hidden');
+    }
+  </script>
+
+</head>
+<body class="flex flex-col min-h-screen" style="background-image: url('https://c8.alamy.com/comp/RGD9XE/map-of-vietnam-outline-silhouette-of-vietnam-map-vector-illustration-RGD9XE.jpg'); background-size: cover; background-repeat: no-repeat; background-attachment: fixed;">
+  <header class="relative">
+    <img src="https://t2.ex-cdn.com/crystalbay.com/resize/1860x570/files/news/2024/06/11/cam-nang-du-lich-bac-ninh-moi-nhat-ngo-ngang-truoc-ve-dep-cua-xu-kinh-bac-co-xua-094232.jpg" alt="Bắc Ninh" class="w-full h-60 object-cover">
+    <div class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-40 flex flex-col items-center justify-center text-white">
+      <img src="https://cdn.haitrieu.com/wp-content/uploads/2022/07/Logo-Tinh-Bac-Ninh.png" alt="Logo Tập đoàn" class="w-20 h-20 mb-4">
+      <h1 class="text-4xl font-bold">Khám Phá Bắc Ninh</h1>
+      <p class="text-lg mt-2">Văn hóa - Con người - Phong cảnh tuyệt đẹp</p>
+    </div>
+  </header>
+
+  <nav class="bg-green-700 text-white p-4 flex justify-center space-x-6">
+    <a href="#culture" class="hover:underline">Văn Hóa</a>
+    <a href="#people" class="hover:underline">Con Người</a>
+    <a href="#scenery" class="hover:underline">Phong Cảnh</a>
+    <a href="#scenery" class="hover:underline">Ẩm thực</a>
+    <a href="#booking" class="hover:underline">Đặt Vé</a>
+  </nav>
+
+  <main class="flex-grow">
+    <section id="overview" class="p-6 bg-white text-center">
+      <h2 class="text-2xl font-semibold mb-4">Giới thiệu về Bắc Ninh</h2>
+      <p class="max-w-3xl mx-auto mb-6">
+        Bắc Ninh là mảnh đất địa linh nhân kiệt của Việt Nam, nổi tiếng với truyền thống lịch sử lâu đời và nền văn hóa đặc sắc. Là cái nôi của dân ca Quan họ, Bắc Ninh còn được biết đến với nhiều làng nghề truyền thống, những lễ hội đậm đà bản sắc dân tộc. Vẻ đẹp của Bắc Ninh là sự hòa quyện giữa nét cổ kính và hiện đại, từ các ngôi chùa cổ kính đến những khu đô thị năng động. Bắc Ninh xứng đáng là điểm đến hấp dẫn cho du khách trong và ngoài nước.
+      </p>
+
+      <div class="flex justify-center">
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/CL13X-8o4h0?si=YPUNnqfsbYHkPJrH" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </div>
+    </section>
+
+    <section id="culture" class="p-6 bg-gray-50">
+      <h2 class="text-2xl font-semibold mb-6">Văn Hóa Bắc Ninh</h2>
+      <p class="mb-6">
+        Văn hóa Bắc Ninh là sự kết tinh từ ngàn năm lịch sử, nổi bật với dân ca Quan họ được UNESCO công nhận là di sản văn hóa phi vật thể. Các lễ hội như hội Lim, lễ hội làng Diềm đều thu hút hàng vạn du khách mỗi năm. Bắc Ninh cũng là cái nôi của nhiều làng nghề truyền thống như tranh Đông Hồ, gốm Phù Lãng, với nét nghệ thuật mộc mạc, tinh tế. Mỗi nét văn hóa nơi đây đều mang trong mình chiều sâu lịch sử và tình người đậm đà.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <img src="https://hoangthanhthanglong.vn/wp-content/uploads/2023/05/quanho1.jpg" alt="Quan họ" class="rounded">
+          <p class="text-center mt-2">Hát Quan họ - Tinh hoa văn hóa Bắc Ninh</p>
+        </div>
+        <div>
+          <img src="https://topgotourist.vn/img/news/full_topgotourist_hoi-lim-van-hoa-truyen-thong-o-dat-kinh-bac-145-202371810551.jpeg" alt="Hội Lim" class="rounded">
+          <p class="text-center mt-2">Hội Lim - lễ hội truyền thống đặc sắc</p>
+        </div>
+        <div>
+          <img src="https://www.yong.vn/Content/images/travels/lang-tranh-dong-ho.jpg" alt="Tranh Đông Hồ" class="rounded">
+          <p class="text-center mt-2">Tranh dân gian Đông Hồ</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="people" class="p-6 bg-white">
+      <h2 class="text-2xl font-semibold mb-6">Con Người Bắc Ninh</h2>
+      <p class="mb-6">
+        Con người Bắc Ninh nổi bật với tinh thần hiếu học, cần cù và mến khách. Từ thời phong kiến, Bắc Ninh đã có nhiều danh nhân, tiến sĩ nổi tiếng. Người dân nơi đây giữ gìn phong tục tập quán, lễ nghĩa truyền thống và luôn tự hào về nguồn cội quê hương. Với đức tính chăm chỉ và sáng tạo, họ đã góp phần xây dựng quê hương Bắc Ninh ngày càng giàu đẹp và văn minh.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <img src="https://s.webpie.net/instances/1/1f9af20d5185521cb57b510e28d088d5/_p/94c07624e3e45e3aa587f487f0cbbff9/1_fix.jpg" alt="Văn Miếu Bắc Ninh" class="rounded">
+          <p class="text-center mt-2">Văn Miếu Bắc Ninh - Tôn vinh hiền tài</p>
+        </div>
+        <div>
+          <img src="https://vnanet.vn/Data/Articles/2019/08/28/4045531/vna_potal_lang_nghe_truyen_thong_tranh_dan_gian_dong_ho_135822598_stand.jpg" alt="Làng nghề Đông Hồ" class="rounded">
+          <p class="text-center mt-2">Nghệ nhân tranh Đông Hồ</p>
+        </div>
+        <div>
+          <img src="https://mediabbn.mediatech.vn/upload/image/202404/medium/189965_9ec76e9e4847f72e31c0dbba761edd76.jpg" alt="Người dân Bắc Ninh" class="rounded">
+          <p class="text-center mt-2">Người dân Bắc Ninh mến khách</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="scenery" class="p-6 bg-gray-50">
+      <h2 class="text-2xl font-semibold mb-6">Phong Cảnh Bắc Ninh</h2>
+      <p class="mb-6">
+        Bắc Ninh sở hữu những danh thắng nổi tiếng như chùa Dâu, chùa Bút Tháp với kiến trúc cổ kính, trầm mặc. Sông Cầu với dòng nước hiền hòa, thơ mộng đã đi vào bao câu ca Quan họ. Ngoài ra, làng quê Bắc Ninh với cánh đồng xanh mát, con đường làng quanh co, là điểm đến lý tưởng cho những ai yêu thích sự yên bình, giản dị.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <img src="https://cdn3.ivivu.com/2022/11/ch%C3%B9a-d%C3%A2u-ivivu.jpg" alt="Chùa Dâu" class="rounded">
+          <p class="text-center mt-2">Chùa Dâu - ngôi chùa cổ nhất Việt Nam</p>
+        </div>
+        <div>
+          <img src="https://badenmountain.sunworld.vn/wp-content/uploads/2025/04/19-Chu%CC%80a-Bu%CC%81t-Tha%CC%81p-1.jpg" alt="Chùa Bút Tháp" class="rounded">
+          <p class="text-center mt-2">Chùa Bút Tháp - tinh hoa kiến trúc Phật giáo</p>
+        </div>
+        <div>
+          <img src="https://baobacninh.com.vn/image/journal/article?img_id=1671469&t=1697795917317" alt="Sông Cầu" class="rounded">
+          <p class="text-center mt-2">Sông Cầu thơ mộng</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="food" class="p-6 bg-white">
+      <h2 class="text-2xl font-semibold mb-6">Ẩm Thực Bắc Ninh</h2>
+      <p class="mb-6">
+        Ẩm thực Bắc Ninh đậm đà hương vị quê hương với các món đặc sản như bánh phu thê, nem làng Bùi, cháo cá Bắc Ninh. Mỗi món ăn mang trong mình câu chuyện và hương vị riêng, được chế biến tỉ mỉ, tinh tế. Người Bắc Ninh không chỉ giữ gìn hương vị truyền thống mà còn sáng tạo để ẩm thực quê nhà ngày càng phong phú, hấp dẫn.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <img src="https://eggyolk.vn/wp-content/uploads/2025/01/Cach-lam-banh-phu-the-bac-ninh.jpg" alt="Bánh phu thê" class="rounded">
+          <p class="text-center mt-2">Bánh phu thê - biểu tượng tình yêu đôi lứa</p>
+        </div>
+        <div>
+          <img src="https://cafebiz.cafebizcdn.vn/162123310254002176/2022/8/12/photo-1-16602879051761795096549.jpg" alt="Nem làng Bùi" class="rounded">
+          <p class="text-center mt-2">Nem làng Bùi - đặc sản nổi tiếng Bắc Ninh</p>
+        </div>
+        <div>
+          <img src="https://media.baovanhoa.vn/zoom/1200_630/Portals/0/EasyDNNNews/50058/IMG_5948.JPG" alt="Cháo cá" class="rounded">
+          <p class="text-center mt-2">Cháo cá - món ăn dân dã Bắc Ninh</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="booking" class="p-6 bg-white">
+      <h2 class="text-2xl font-semibold mb-6 text-center">Đặt Vé Du Lịch<br>(Ưu đãi trọn gói chỉ 1 triệu đô)</h2>
+      <form onsubmit="event.preventDefault(); showPayment();" class="space-y-4 max-w-lg mx-auto">
+        <div>
+          <label class="block text-sm font-medium">Họ và Tên</label>
+          <input type="text" class="mt-1 w-full border p-2 rounded" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Số Điện Thoại</label>
+          <input type="tel" class="mt-1 w-full border p-2 rounded" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Chọn Khu Du Lịch</label>
+          <select class="mt-1 w-full border p-2 rounded" required>
+            <option value="">-- Chọn khu --</option>
+            <option>Chùa Dâu</option>
+            <option>Chùa Bút Tháp</option>
+            <option>Làng tranh Đông Hồ</option>
+            <option>Sông Cầu thơ mộng</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Số lượng vé</label>
+          <input type="number" min="1" value="1" class="mt-1 w-full border p-2 rounded" required>
+        </div>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Tiếp tục thanh toán</button>
+      </form>
+
+      <div id="payment-section" class="hidden mt-8 max-w-lg mx-auto bg-gray-100 p-6 rounded">
+        <h3 class="text-xl font-semibold mb-4">Chọn Ngân Hàng Thanh Toán</h3>
+        <select class="w-full border p-2 rounded mb-4">
+          <option value="">-- Chọn ngân hàng --</option>
+          <option>Vietcombank</option>
+          <option>Techcombank</option>
+          <option>MB Bank</option>
+          <option>VP Bank</option>
+        </select>
+        <div>
+          <label class="block text-sm font-medium mt-4">Số tài khoản</label>
+          <input type="text" class="mt-1 w-full border p-2 rounded" placeholder="Nhập số tài khoản" required>
+        </div>
+        <button onclick="confirmPayment()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full mt-4">Thanh Toán</button>
+      </div>
+
+      <div id="success-message" class="hidden text-center mt-6 text-green-600 font-bold text-xl">
+        Thanh toán thành công! 🎉
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="bg-green-800 text-white p-4 text-center">
+    <p>Liên hệ: 0123 456 789 | Email: info@baccninhtravel.vn</p>
+    <p>Địa chỉ: TP. Bắc Ninh, tỉnh Bắc Ninh, Việt Nam</p>
+    <p class="mt-2">© 2025 Bắc Ninh Travel</p>
+  </footer>
+
+  <button id="openPopupBtn" aria-label="Mở tùy chọn hoặc chat">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <div id="popupDialog">
+    <div class="popup-header">
+      <span>Hỗ trợ trực tuyến</span> <button id="closePopupBtn" class="close-btn">×</button>
+    </div>
+    <div class="popup-content">
+      <div id="chat-box">
+        <div class="message bot">Chào bạn! Vui lòng nhập tin nhắn của bạn.</div> </div>
+      <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Nhập tin nhắn...">
+        <button id="send-button">Gửi</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const openPopupButton = document.getElementById('openPopupBtn');
+    const closePopupButton = document.getElementById('closePopupBtn');
+    const popupDialog = document.getElementById('popupDialog');
+    const chatBox = document.getElementById('chat-box'); // Lấy phần tử chat box
+    const chatInput = document.getElementById('chat-input'); // Lấy phần tử input
+    const sendButton = document.getElementById('send-button'); // Lấy phần tử nút gửi
+    // const sampleQuestionButtons = document.querySelectorAll('#sample-questions button'); // Đã xóa tham chiếu
+
+
+    // Hàm mở popup
+    function openPopup() {
+      popupDialog.classList.add('show');
+      openPopupButton.style.display = 'none'; // Ẩn nút mở khi popup mở
+    }
+
+    // Hàm đóng popup
+    function closePopup() {
+      popupDialog.classList.remove('show');
+      openPopupButton.style.display = 'flex'; // Hiển thị lại nút mở khi popup đóng
+    }
+
+    // Hàm thêm tin nhắn vào chat box
+    function addMessage(message, sender) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', sender); // Thêm class 'message' và class của người gửi ('user' hoặc 'bot')
+        messageElement.textContent = message;
+        chatBox.appendChild(messageElement);
+        // Cuộn xuống cuối chat box
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Hàm hiển thị tin nhắn loading
+    function showLoadingMessage() {
+        const loadingMessageElement = document.createElement('div');
+        loadingMessageElement.classList.add('message', 'bot', 'loading'); // Thêm class loading
+        loadingMessageElement.textContent = '...'; // Nội dung loading
+        chatBox.appendChild(loadingMessageElement);
+        chatBox.scrollTop = chatBox.scrollHeight; // Cuộn xuống
+    }
+
+    // Hàm xóa tin nhắn cuối cùng (thường là tin nhắn loading)
+    function removeLastMessage() {
+        if (chatBox.lastChild) {
+            chatBox.removeChild(chatBox.lastChild);
+        }
+    }
+
+    // Đã xóa hàm handleSampleQuestionClick và lắng nghe sự kiện tương ứng
+
+    // Xử lý khi nút gửi được nhấp (cho tin nhắn tùy chỉnh)
+    function sendMessage() {
+        const message = chatInput.value.trim(); // Lấy nội dung tin nhắn và loại bỏ khoảng trắng thừa
+        if (message) { // Chỉ gửi nếu tin nhắn không rỗng
+            addMessage(message, 'user'); // Thêm tin nhắn của người dùng
+            chatInput.value = ''; // Xóa nội dung trong input sau khi gửi
+
+            showLoadingMessage(); // Hiển thị loading
+
+            // Đây là nơi bạn có thể thêm logic xử lý tin nhắn tùy chỉnh (ví dụ: gửi đến server, hiển thị phản hồi tự động)
+            // Ví dụ phản hồi tự động đơn giản sau delay
+            setTimeout(() => {
+                removeLastMessage(); // Xóa loading
+                addMessage('Trợ lí của chúng tôi sẽ trả lời bạn sau ít phút nữa. Xin lỗi vì sự bất tiện này!!!', 'bot');
+            }, 1500); // Delay 1.5 giây
+        }
+    }
+
+
+    // Lắng nghe sự kiện click vào nút mở
+    openPopupButton.addEventListener('click', openPopup);
+    // Lắng nghe sự kiện click vào nút đóng
+    closePopupButton.addEventListener('click', closePopup);
+
+    // Đã xóa lắng nghe sự kiện click vào các nút câu hỏi mẫu
+
+    // Lắng nghe sự kiện click vào nút gửi (cho tin nhắn tùy chỉnh)
+    sendButton.addEventListener('click', sendMessage);
+    // Lắng nghe sự kiện nhấn Enter trong input (cho tin nhắn tùy chỉnh)
+    chatInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Ngăn chặn hành động mặc định của Enter (xuống dòng)
+            sendMessage();
+        }
+    });
+
+
+    // Các hàm xử lý thanh toán (giữ nguyên)
+    function showPayment() {
+      document.getElementById('payment-section').classList.remove('hidden');
+    }
+
+    function confirmPayment() {
+      document.getElementById('success-message').classList.remove('hidden');
+    }
+  </script>
+
+</body>
+</html>
